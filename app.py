@@ -110,7 +110,7 @@ with tab_inquerito:
         else:
             try:
                 # Ler os dados atuais do Google Sheets
-                df_atual = conn.read()
+                df_atual = conn.read(ttl=0)
                 
                 # Criar a nova linha de registo
                 data_nasc_str = data_nascimento.strftime("%Y-%m-%d") if data_nascimento else ""
@@ -162,7 +162,7 @@ with tab_dashboard:
         
         try:
             # Ler dados mais recentes do Sheets
-            df_dash = conn.read()
+            df_dash = conn.read(ttl=0)
             
             if not df_dash.empty:
                 total_colab = len(df_dash)
