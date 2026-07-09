@@ -72,7 +72,13 @@ with tab_inquerito:
         with col5:
             sexo = st.selectbox("Sexo (Gender)", opcoes_sexo)
         with col6:
-            data_nascimento = st.date_input("Data de Nascimento (Date of Birth)")
+            from datetime import date
+            data_nascimento = st.date_input(
+                "Data de Nascimento (Date of Birth)",
+                value=date(1995, 1, 1),
+                min_value=date(1950, 1, 1),
+                max_value=date(2010, 12, 31)
+            )
         
         st.markdown("---")
         st.subheader("Secção 2: Contactos e Empresa")
