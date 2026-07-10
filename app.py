@@ -1,6 +1,6 @@
 import streamlit as st
 import pandas as pd
-from datetime import datetime
+from datetime import datetime, date
 from streamlit_gsheets import GSheetsConnection
 import matplotlib.pyplot as plt
 from pathlib import Path
@@ -18,7 +18,9 @@ except Exception as e:
 
 # Caminhos e Imagens
 script_dir = Path(__file__).parent
-LOGO_PATH = script_dir / "Logo_tipo_gtsa.jpeg"
+# Verifica as duas formas como o ficheiro pode estar escrito no GitHub (Linux é sensível a maiúsculas)
+LOGO_PATH_1 = script_dir / "Logo_tipo_GtSa.jpeg"
+LOGO_PATH_2 = script_dir / "Logo_tipo_gtsa.jpeg"
 
 # Opções para os menus
 opcoes_sexo = ["Masculino", "Feminino", "Outro"]
@@ -35,23 +37,40 @@ opcoes_situacao = [
 ]
 
 # ==========================================
-# Estrutura em Tabs (Inquérito vs Dashboard)
+# CABEÇALHO GLOBAL (Aparece em todos os ecrãs)
 # ==========================================
-tab_inquerito, tab_dashboard = st.tabs(["📝 Inquérito (Público)", "📊 Dashboard da Direção"])
+col_logo1, col_logo2, col_logo3 = st.columns([1, 2, 1])
+with col_logo2:
+    if LOGO_PATH_1.exists():
+        st.image(str(LOGO_PATH_1), use_container_width=True)
+    elif LOGO_PATH_2.exists():
+        st.image(str(LOGO_PATH_2), use_container_width=True)
+
+st.markdown("<h1 style='text-align: center; color: #333;'>Gestão de Terminais, S.A.</h1>", unsafe_allow_html=True)
+st.markdown("---")
 
 # ==========================================
-# TAB 1: INQUÉRITO PÚBLICO
+# MENU SUPERIOR COM BOTÕES ESTILIZADOS
 # ==========================================
-with tab_inquerito:
-    # Cabeçalho
-    col_logo1, col_logo2, col_logo3 = st.columns([1, 2, 1])
-    with col_logo2:
-        if LOGO_PATH.exists():
-            st.image(str(LOGO_PATH), use_container_width=True)
+# Controla que página o utilizador está a ver
+if 'pagina_atual' not in st.session_state:
+    st.session_state.pagina_atual = "Inquérito"
 
-    st.markdown("<h1 style='text-align: center; color: #333;'>Gestão de Terminais. sa.</h1>", unsafe_allow_html=True)
-    st.markdown("---")
-    
+col_btn1, col_btn2 = st.columns(2)
+with col_btn1:
+    if st.button("📝 Inquérito (Público)", use_container_width=True):
+        st.session_state.pagina_atual = "Inquérito"
+with col_btn2:
+    if st.button("📊 Dashboard da Direção", use_container_width=True):
+        st.session_state.pagina_atual = "Dashboard"
+
+st.markdown("<br>", unsafe_allow_html=True)
+
+
+# ==========================================
+# PÁGINA 1: INQUÉRITO PÚBLICO
+# ==========================================
+if st.session_state.pagina_atual == "Inquérito":
     with st.form("inquerito_mcnet", clear_on_submit=True):
         st.subheader("Secção 1: Identificação")
         col1, col2 = st.columns(2)
@@ -72,7 +91,6 @@ with tab_inquerito:
         with col5:
             sexo = st.selectbox("Sexo (Gender)", opcoes_sexo)
         with col6:
-            from datetime import date
             data_nascimento = st.date_input(
                 "Data de Nascimento (Date of Birth)",
                 value=date(1995, 1, 1),
@@ -88,6 +106,11 @@ with tab_inquerito:
             funcao = st.selectbox("Função (Designation-Role)", opcoes_funcao)
         with col8:
             departamento = st.selectbox("Afectação (Department)", opcoes_departamento)
+        
+        # LOGICA DO TURNO CONDICIONAL
+        turno = ""
+        if funcao in ["Faturador", "Chefe de Turno"]:
+            turno = st.radio("Selecione o Turno", ["A", "B", "C", "D"], horizontal=True)
             
         col9, col10 = st.columns(2)
         with col9:
@@ -109,10 +132,8 @@ with tab_inquerito:
             st.error("⚠️ Por favor, preencha os campos obrigatórios: Primeiro Nome e Apelido.")
         else:
             try:
-                # Ler os dados atuais do Google Sheets
                 df_atual = conn.read(ttl=0)
                 
-                # Criar a nova linha de registo
                 data_nasc_str = data_nascimento.strftime("%Y-%m-%d") if data_nascimento else ""
                 carimbo_tempo = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
                 
@@ -126,6 +147,7 @@ with tab_inquerito:
                     'Sexo (Gender)': sexo,
                     'Data de Nascimento (Date of Birth)': data_nasc_str,
                     'Função (Designation-Role)': funcao,
+                    'Turno': turno,  # Envia o turno guardado para a nova coluna do Sheets
                     'Afectação (Department)': departamento,
                     'Número do WhatsApp': whatsapp.strip(),
                     'Telemóvel (Mobile Phone No)': telemovel.strip(),
@@ -133,7 +155,6 @@ with tab_inquerito:
                     'Ponto de Situação (Janela Única)': situacao
                 }
                 
-                # Juntar e atualizar no Google Sheets
                 novo_df = pd.DataFrame([nova_linha])
                 df_atualizado = pd.concat([df_atual, novo_df], ignore_index=True)
                 
@@ -144,15 +165,15 @@ with tab_inquerito:
             except Exception as e:
                 st.error(f"❌ Ocorreu um erro ao comunicar com o servidor: {e}")
 
-    # Rodapé da Tab 1
+    # Rodapé 
     st.markdown("<br><hr>", unsafe_allow_html=True)
     st.markdown("<p style='text-align: center; color: #777; font-size: 14px;'>Sistema Desenvolvido Pelo Departamento De Tecnologias De Informação E Comunicação - GTSA</p>", unsafe_allow_html=True)
 
 
 # ==========================================
-# TAB 2: DASHBOARD DA DIREÇÃO
+# PÁGINA 2: DASHBOARD DA DIREÇÃO
 # ==========================================
-with tab_dashboard:
+elif st.session_state.pagina_atual == "Dashboard":
     st.header("🔒 Acesso Restrito à Direção")
     senha = st.text_input("Insere a palavra-passe para ver os resultados:", type="password")
     
@@ -161,14 +182,12 @@ with tab_dashboard:
         st.markdown("---")
         
         try:
-            # Ler dados mais recentes do Sheets
             df_dash = conn.read(ttl=0)
             
             if not df_dash.empty:
                 total_colab = len(df_dash)
                 st.markdown(f"### 👥 Total de Inquéritos Preenchidos: **{total_colab}**")
                 
-                # Contagens de situação
                 if 'Ponto de Situação (Janela Única)' in df_dash.columns:
                     counts = df_dash['Ponto de Situação (Janela Única)'].value_counts()
                     
@@ -180,7 +199,6 @@ with tab_dashboard:
                     
                     st.markdown("---")
                     
-                    # Gráfico de Distribuição
                     st.subheader("Distribuição do Estado dos Acessos")
                     fig, ax = plt.subplots(figsize=(6, 4))
                     
