@@ -52,17 +52,61 @@ st.markdown("---")
 # ==========================================
 # MENU SUPERIOR COM BOTÕES ESTILIZADOS
 # ==========================================
-# Controla que página o utilizador está a ver
+# 1. Injetar CSS para tornar os botões grandes e óbvios
+st.markdown("""
+<style>
+    /* Estilo geral para os botões do menu ficarem gigantes e clicáveis */
+    div.stButton > button {
+        height: 60px;
+        font-size: 18px !important;
+        font-weight: bold !important;
+        border-radius: 12px;
+        transition: all 0.3s;
+        box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+    }
+    
+    /* Cor do botão ATIVO (Fundo Azul, Letra Branca) */
+    div.stButton > button[kind="primary"] {
+        background-color: #0056b3; 
+        color: white;
+        border: none;
+    }
+    div.stButton > button[kind="primary"]:hover {
+        background-color: #004494;
+    }
+    
+    /* Cor do botão INATIVO (Fundo Claro, Borda Azul) */
+    div.stButton > button[kind="secondary"] {
+        background-color: #ffffff;
+        color: #0056b3;
+        border: 2px solid #0056b3;
+    }
+    div.stButton > button[kind="secondary"]:hover {
+        background-color: #f0f8ff;
+        border: 2px solid #004494;
+        color: #004494;
+    }
+</style>
+""", unsafe_allow_html=True)
+
+# 2. Lógica de navegação
 if 'pagina_atual' not in st.session_state:
     st.session_state.pagina_atual = "Inquérito"
 
+# 3. Definir qual botão ganha a cor forte (primary) dependendo de onde o utilizador está
+tipo_btn_inq = "primary" if st.session_state.pagina_atual == "Inquérito" else "secondary"
+tipo_btn_dash = "primary" if st.session_state.pagina_atual == "Dashboard" else "secondary"
+
+# 4. Desenhar os botões
 col_btn1, col_btn2 = st.columns(2)
 with col_btn1:
-    if st.button("📝 Inquérito (Público)", use_container_width=True):
+    if st.button("📝 Inquérito (Público)", use_container_width=True, type=tipo_btn_inq):
         st.session_state.pagina_atual = "Inquérito"
+        st.rerun() # Força a página a atualizar a cor instantaneamente
 with col_btn2:
-    if st.button("📊 Dashboard da Direção", use_container_width=True):
+    if st.button("📊 Dashboard da Direção", use_container_width=True, type=tipo_btn_dash):
         st.session_state.pagina_atual = "Dashboard"
+        st.rerun()
 
 st.markdown("<br>", unsafe_allow_html=True)
 
