@@ -4,6 +4,7 @@ from datetime import datetime, date
 from streamlit_gsheets import GSheetsConnection
 import matplotlib.pyplot as plt
 from pathlib import Path
+import io  # Necessário para gerar o ficheiro Excel oficial
 
 # ==========================================
 # Configuração da página e Layout Responsivo
@@ -149,7 +150,7 @@ if st.session_state.pagina_atual == "Inquérito":
         with col8:
             departamento = st.selectbox("Afectação (Department)", opcoes_departamento)
         
-        # LOGICA DO TURNO CONDICIONAL
+        # LÓGICA DO TURNO CONDICIONAL
         turno = ""
         if funcao in ["Faturador", "Chefe de Turno"]:
             turno = st.radio("Selecione o Turno", ["A", "B", "C", "D"], horizontal=True)
@@ -241,12 +242,19 @@ elif st.session_state.pagina_atual == "Dashboard":
                 
                 with col_exp:
                     st.markdown("<br>", unsafe_allow_html=True)
-                    csv_export = df_dash.to_csv(index=False, sep=';', encoding='utf-8-sig')
+                    
+                    # GERAR FICHEIRO EXCEL VERDADEIRO (.xlsx)
+                    buffer = io.BytesIO()
+                    with pd.ExcelWriter(buffer, engine='openpyxl') as writer:
+                        df_dash.to_excel(writer, index=False, sheet_name='Colaboradores')
+                    
+                    excel_data = buffer.getvalue()
+                    
                     st.download_button(
-                        label="📥 Descarregar para Excel",
-                        data=csv_export,
-                        file_name=f"Relatorio_MCnet_GTSA_{datetime.now().strftime('%Y%m%d')}.csv",
-                        mime="text/csv",
+                        label="📥 Descarregar Excel Oficial",
+                        data=excel_data,
+                        file_name=f"Relatorio_MCnet_GTSA_{datetime.now().strftime('%Y%m%d')}.xlsx",
+                        mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
                         use_container_width=True
                     )
                 
@@ -294,8 +302,9 @@ elif st.session_state.pagina_atual == "Dashboard":
                             st.bar_chart(dept_counts, color="#0056b3")
                     
                     st.markdown("---")
-                    st.subheader("Dados Brutos da Operação")
-                    st.dataframe(df_dash, use_container_width=True)
+                    st.subheader("📋 Dados Brutos da Operação")
+                    # Tabela limpa: hide_index=True retira os números das linhas (0, 1, 2)
+                    st.dataframe(df_dash, use_container_width=True, hide_index=True)
                 else:
                     st.warning("O formato do Google Sheets ainda não contém a coluna de Ponto de Situação.")
             else:
