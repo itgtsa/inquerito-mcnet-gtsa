@@ -8,7 +8,7 @@ from pathlib import Path
 # ==========================================
 # Configuração da página e Layout Responsivo
 # ==========================================
-st.set_page_config(page_title="Inquérito - MCnet", page_icon="📝", layout="centered")
+st.set_page_config(page_title="Inquérito - MCnet", page_icon="📝", layout="wide")
 
 # Ligar ao Google Sheets
 try:
@@ -18,7 +18,6 @@ except Exception as e:
 
 # Caminhos e Imagens
 script_dir = Path(__file__).parent
-# Verifica as duas formas como o ficheiro pode estar escrito no GitHub (Linux é sensível a maiúsculas)
 LOGO_PATH_1 = script_dir / "Logo_tipo_GtSa.jpeg"
 LOGO_PATH_2 = script_dir / "Logo_tipo_gtsa.jpeg"
 
@@ -52,10 +51,8 @@ st.markdown("---")
 # ==========================================
 # MENU SUPERIOR COM BOTÕES ESTILIZADOS
 # ==========================================
-# 1. Injetar CSS para tornar os botões grandes e óbvios
 st.markdown("""
 <style>
-    /* Estilo geral para os botões do menu ficarem gigantes e clicáveis */
     div.stButton > button {
         height: 60px;
         font-size: 18px !important;
@@ -64,8 +61,6 @@ st.markdown("""
         transition: all 0.3s;
         box-shadow: 0 4px 6px rgba(0,0,0,0.1);
     }
-    
-    /* Cor do botão ATIVO (Fundo Azul, Letra Branca) */
     div.stButton > button[kind="primary"] {
         background-color: #0056b3; 
         color: white;
@@ -74,8 +69,6 @@ st.markdown("""
     div.stButton > button[kind="primary"]:hover {
         background-color: #004494;
     }
-    
-    /* Cor do botão INATIVO (Fundo Claro, Borda Azul) */
     div.stButton > button[kind="secondary"] {
         background-color: #ffffff;
         color: #0056b3;
@@ -89,20 +82,17 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
-# 2. Lógica de navegação
 if 'pagina_atual' not in st.session_state:
     st.session_state.pagina_atual = "Inquérito"
 
-# 3. Definir qual botão ganha a cor forte (primary) dependendo de onde o utilizador está
 tipo_btn_inq = "primary" if st.session_state.pagina_atual == "Inquérito" else "secondary"
 tipo_btn_dash = "primary" if st.session_state.pagina_atual == "Dashboard" else "secondary"
 
-# 4. Desenhar os botões
 col_btn1, col_btn2 = st.columns(2)
 with col_btn1:
     if st.button("📝 Inquérito (Público)", use_container_width=True, type=tipo_btn_inq):
         st.session_state.pagina_atual = "Inquérito"
-        st.rerun() # Força a página a atualizar a cor instantaneamente
+        st.rerun() 
 with col_btn2:
     if st.button("📊 Dashboard da Direção", use_container_width=True, type=tipo_btn_dash):
         st.session_state.pagina_atual = "Dashboard"
@@ -110,11 +100,19 @@ with col_btn2:
 
 st.markdown("<br>", unsafe_allow_html=True)
 
-
 # ==========================================
 # PÁGINA 1: INQUÉRITO PÚBLICO
 # ==========================================
 if st.session_state.pagina_atual == "Inquérito":
+    
+    # NOVA MENSAGEM EXPLICATIVA
+    st.info("""
+    ℹ️ **Objetivo deste Registo:**  
+    Este formulário destina-se à atualização rigorosa da base de dados de acessos ao sistema **MCnet (Janela Única)**. 
+    O preenchimento é obrigatório para todos os colaboradores envolvidos na operação da GTSA. Os dados recolhidos garantem que as suas credenciais, alocação de turnos e nível de formação estão devidamente registados para manter a operação sem interrupções.
+    """)
+    st.markdown("<br>", unsafe_allow_html=True)
+
     with st.form("inquerito_mcnet", clear_on_submit=True):
         st.subheader("Secção 1: Identificação")
         col1, col2 = st.columns(2)
@@ -191,7 +189,7 @@ if st.session_state.pagina_atual == "Inquérito":
                     'Sexo (Gender)': sexo,
                     'Data de Nascimento (Date of Birth)': data_nasc_str,
                     'Função (Designation-Role)': funcao,
-                    'Turno': turno,  # Envia o turno guardado para a nova coluna do Sheets
+                    'Turno': turno, 
                     'Afectação (Department)': departamento,
                     'Número do WhatsApp': whatsapp.strip(),
                     'Telemóvel (Mobile Phone No)': telemovel.strip(),
@@ -215,7 +213,7 @@ if st.session_state.pagina_atual == "Inquérito":
 
 
 # ==========================================
-# PÁGINA 2: DASHBOARD DA DIREÇÃO
+# PÁGINA 2: DASHBOARD DA DIREÇÃO AVANÇADO
 # ==========================================
 elif st.session_state.pagina_atual == "Dashboard":
     st.header("🔒 Acesso Restrito à Direção")
@@ -229,8 +227,37 @@ elif st.session_state.pagina_atual == "Dashboard":
             df_dash = conn.read(ttl=0)
             
             if not df_dash.empty:
+                # ------------------------------------
+                # EXPORTAÇÃO E FILTROS 
+                # ------------------------------------
+                col_filt, col_exp = st.columns([2, 1])
+                
+                with col_filt:
+                    lista_dept = ["Todos"] + list(df_dash['Afectação (Department)'].dropna().unique())
+                    filtro_dept = st.selectbox("Filtro: Selecione o Departamento para analisar", lista_dept)
+                    
+                    if filtro_dept != "Todos":
+                        df_dash = df_dash[df_dash['Afectação (Department)'] == filtro_dept]
+                
+                with col_exp:
+                    st.markdown("<br>", unsafe_allow_html=True)
+                    csv_export = df_dash.to_csv(index=False, sep=';', encoding='utf-8-sig')
+                    st.download_button(
+                        label="📥 Descarregar para Excel",
+                        data=csv_export,
+                        file_name=f"Relatorio_MCnet_GTSA_{datetime.now().strftime('%Y%m%d')}.csv",
+                        mime="text/csv",
+                        use_container_width=True
+                    )
+                
+                st.info("💡 **Dica para PDF:** Para gerar um relatório em PDF com o Logótipo e Gráficos da GTSA, pressione **Ctrl + P** no seu teclado e escolha 'Guardar como PDF'.")
+                st.markdown("---")
+
+                # ------------------------------------
+                # MÉTRICAS E GRÁFICOS
+                # ------------------------------------
                 total_colab = len(df_dash)
-                st.markdown(f"### 👥 Total de Inquéritos Preenchidos: **{total_colab}**")
+                st.markdown(f"### 👥 Colaboradores Encontrados (Filtro Atual): **{total_colab}**")
                 
                 if 'Ponto de Situação (Janela Única)' in df_dash.columns:
                     counts = df_dash['Ponto de Situação (Janela Única)'].value_counts()
@@ -243,26 +270,32 @@ elif st.session_state.pagina_atual == "Dashboard":
                     
                     st.markdown("---")
                     
-                    st.subheader("Distribuição do Estado dos Acessos")
-                    fig, ax = plt.subplots(figsize=(6, 4))
+                    col_graf1, col_graf2 = st.columns(2)
                     
-                    cores_mapa = {
-                        opcoes_situacao[0]: "#28a745",
-                        opcoes_situacao[1]: "#ffc107",
-                        opcoes_situacao[2]: "#17a2b8",
-                        opcoes_situacao[3]: "#dc3545"
-                    }
-                    cores = [cores_mapa.get(x, '#cccccc') for x in counts.index]
-                    
-                    ax.pie(counts.values, labels=counts.index, colors=cores, autopct='%1.1f%%', startangle=140, wedgeprops={'edgecolor': 'white'})
-                    ax.axis('equal')
-                    fig.patch.set_alpha(0.0)
-                    
-                    st.pyplot(fig)
+                    with col_graf1:
+                        st.subheader("Estado dos Acessos")
+                        fig, ax = plt.subplots(figsize=(6, 4))
+                        cores_mapa = {
+                            opcoes_situacao[0]: "#28a745",
+                            opcoes_situacao[1]: "#ffc107",
+                            opcoes_situacao[2]: "#17a2b8",
+                            opcoes_situacao[3]: "#dc3545"
+                        }
+                        cores = [cores_mapa.get(x, '#cccccc') for x in counts.index]
+                        ax.pie(counts.values, labels=counts.index, colors=cores, autopct='%1.1f%%', startangle=140, wedgeprops={'edgecolor': 'white'})
+                        ax.axis('equal')
+                        fig.patch.set_alpha(0.0)
+                        st.pyplot(fig)
+                        
+                    with col_graf2:
+                        st.subheader("Distribuição por Departamento")
+                        if 'Afectação (Department)' in df_dash.columns:
+                            dept_counts = df_dash['Afectação (Department)'].value_counts()
+                            st.bar_chart(dept_counts, color="#0056b3")
                     
                     st.markdown("---")
-                    st.subheader("Dados Brutos (Recentes)")
-                    st.dataframe(df_dash.tail(10), use_container_width=True)
+                    st.subheader("Dados Brutos da Operação")
+                    st.dataframe(df_dash, use_container_width=True)
                 else:
                     st.warning("O formato do Google Sheets ainda não contém a coluna de Ponto de Situação.")
             else:
